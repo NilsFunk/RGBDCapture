@@ -1,3 +1,6 @@
+# Update
+This is a updated version of the RGBDCapture repositiory by chaowang15. I changed the openCV and openNI2 code to fit the current api. 
+
 # RGBDCapture
 
 This code is to capture RGB-D data into PNG images with an OpenNI-drived depth camera (Kinect v1, Asus XTion, etc). The RGB images are 640x480 8-bit images, and the depth images are 640×480 16-bit monochrome images. The RGB-D data is exactly in the format of [TUM RGB-D data](http://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats). You can use their tools to analyze the data.
