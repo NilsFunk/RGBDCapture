@@ -3,7 +3,7 @@
 OpenNISensor::OpenNISensor()
 {
 	m_flagInitSuccessful = m_flagShowImage = true;
-	m_frameNum = m_frameIdx = 0;
+	m_frameNum = m_frameIdx = 2;
 	m_sensorType = 0;
 	init();
 }
@@ -42,8 +42,45 @@ bool OpenNISensor::init()
 		return m_flagInitSuccessful;
 	}
 
+	/**
+	Get all supported video mode for depth and color sensors, since each device
+	always supports multiple video modes, such as 320x240/640x480 resolution,
+	30/60 fps for depth or color sensors.
+	*/
+	const openni::SensorInfo* depthSensorInfo = m_device.getSensorInfo(openni::SENSOR_DEPTH);
+	int depthVideoModeNum = depthSensorInfo->getSupportedVideoModes().getSize();
+	cout << "Depth video modes: " << endl;
+	for (int j = 0; j < depthVideoModeNum; ++j)
+	{
+		openni::VideoMode videomode = depthSensorInfo->getSupportedVideoModes()[j];
+		cout << "Mode " << j << ": Resolution = (" << videomode.getResolutionX() 
+			<< "," << videomode.getResolutionY() << ")"
+			<< ", PixelFormat = "<< videomode.getPixelFormat()
+			<< ", FPS = " << videomode.getFps() << endl;
+	}
+	const openni::SensorInfo* colorSensorInfo = m_device.getSensorInfo(openni::SENSOR_COLOR);
+	int colorVideoModeNum = colorSensorInfo->getSupportedVideoModes().getSize();
+	cout << "Color video modes: " << endl;
+	for (int j = 0; j < colorVideoModeNum; ++j)
+	{
+		openni::VideoMode videomode = colorSensorInfo->getSupportedVideoModes()[j];
+		cout << "Mode " << j << ": Resolution = (" << videomode.getResolutionX() 
+			<< "," << videomode.getResolutionY() << ")"
+			<< ", PixelFormat = "<< videomode.getPixelFormat()
+			<< ", FPS = " << videomode.getFps() << endl;
+	}
 
 	rc = m_depthStream.create(m_device, openni::SENSOR_DEPTH);
+	openni::Status depthStatus = m_depthStream.setVideoMode(depthSensorInfo->getSupportedVideoModes()[4]);
+	/** 
+	Set video modes for depth and color streams if the default ones are not
+ 	what we need. You can check the video modes using above codes.
+	*/
+	
+	if (depthStatus == openni::STATUS_OK) 
+		cout << "Depth mode: OK" << endl;
+	else
+		cout << "Depth mode: not OK" << endl; 
 
 	if (rc == openni::STATUS_OK)
 	{
@@ -66,6 +103,17 @@ bool OpenNISensor::init()
 	}
 
 	rc = m_colorStream.create(m_device, openni::SENSOR_COLOR);
+	/** 
+	Set video modes for depth and color streams if the default ones are not
+ 	what we need. You can check the video modes using above codes.
+	*/
+	openni::Status colorStatus = m_colorStream.setVideoMode(colorSensorInfo->getSupportedVideoModes()[9]);
+	
+	if (colorStatus == openni::STATUS_OK) 
+		cout << "Color mode: OK" << endl;
+	else
+		cout << "Color mode: not OK" << endl;
+
 	if (rc == openni::STATUS_OK)
 	{
 		rc = m_colorStream.start();
@@ -84,42 +132,6 @@ bool OpenNISensor::init()
 		m_flagInitSuccessful = false;
 		return m_flagInitSuccessful;
 	}	
-	
-	///**
-	//Get all supported video mode for depth and color sensors, since each device
-	//always supports multiple video modes, such as 320x240/640x480 resolution,
-	//30/60 fps for depth or color sensors.
-	//*/
-	//const SensorInfo* depthSensorInfo = m_device[i].getSensorInfo(SENSOR_DEPTH);
-	//int depthVideoModeNum = depthSensorInfo->getSupportedVideoModes().getSize();
-	//cout << "Depth video modes: " << endl;
-	//for (int j = 0; j < depthVideoModeNum; ++j)
-	//{
-	//	VideoMode videomode = depthSensorInfo->getSupportedVideoModes()[j];
-	//	cout << "Mode " << j << ": Resolution = (" << videomode.getResolutionX() 
-	//		<< "," << videomode.getResolutionY() << ")"
-	//		<< ", PixelFormat = "<< videomode.getPixelFormat()
-	//		<< ", FPS = " << videomode.getFps() << endl;
-	//}
-	//const SensorInfo* colorSensorInfo = m_device[i].getSensorInfo(SENSOR_COLOR);
-	//int colorVideoModeNum = colorSensorInfo->getSupportedVideoModes().getSize();
-	//cout << "Color video modes: " << endl;
-	//for (int j = 0; j < colorVideoModeNum; ++j)
-	//{
-	//	VideoMode videomode = colorSensorInfo->getSupportedVideoModes()[j];
-	//	cout << "Mode " << j << ": Resolution = (" << videomode.getResolutionX() 
-	//		<< "," << videomode.getResolutionY() << ")"
-	//		<< ", PixelFormat = "<< videomode.getPixelFormat()
-	//		<< ", FPS = " << videomode.getFps() << endl;
-	//}
-
-	//// Set video modes for depth and color streams if the default ones are not
-	//// waht we need. You can check the video modes using above codes.
-	////m_depthStream[i].setVideoMode(depthSensorInfo->getSupportedVideoModes()[0]);
-	////VideoMode videomode = colorSensorInfo->getSupportedVideoModes()[9];
-	////videomode.setPixelFormat(openni::PIXEL_FORMAT_RGB888);
-	////openni::Status status = m_colorStream[i].setVideoMode(colorSensorInfo->getSupportedVideoModes()[9]);
-
 
 	if (!m_depthStream.isValid() || !m_colorStream.isValid())
 	{
@@ -144,7 +156,6 @@ bool OpenNISensor::init()
 	int delta = 100;
 	m_colorStream.getCameraSettings()->setExposure(exposure + delta);
 	m_flagInitSuccessful = true;
-
 	return m_flagInitSuccessful;
 }
 
@@ -154,12 +165,11 @@ void OpenNISensor::scan()
 		cout << "WARNING: initialize the device at first!" << endl;
 		return;
 	}
-
 	createRGBDFolders();
 
 	string strDepthWindowName("Depth"), strColorWindowName("Color");
-	cv::namedWindow(strDepthWindowName, CV_WINDOW_AUTOSIZE);
-	cv::namedWindow(strColorWindowName, CV_WINDOW_AUTOSIZE);
+	cv::namedWindow(strDepthWindowName, WINDOW_AUTOSIZE);
+	cv::namedWindow(strColorWindowName, WINDOW_AUTOSIZE);
 	
 	while (true)
 	{
@@ -168,7 +178,7 @@ void OpenNISensor::scan()
 		{
 			cv::Mat mImageRGB(m_colorHeight, m_colorWidth, CV_8UC3, (void*)m_colorFrame.getData());
 			cv::Mat cImageBGR;
-			cv::cvtColor(mImageRGB, cImageBGR, CV_RGB2BGR);
+			cv::cvtColor(mImageRGB, cImageBGR, cv::COLOR_RGB2BGR);
 			if (m_sensorType == 0)
 				cv::flip(cImageBGR, cImageBGR, 1);
 			cv::imshow(strColorWindowName, cImageBGR);
