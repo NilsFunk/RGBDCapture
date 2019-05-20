@@ -171,6 +171,14 @@ void OpenNISensor::scan()
 	cv::namedWindow(strDepthWindowName, WINDOW_AUTOSIZE);
 	cv::namedWindow(strColorWindowName, WINDOW_AUTOSIZE);
 	
+	ofstream fdepth;
+	fdepth.open(m_strRGBDFolder + "/depth.txt");
+	ofstream frgb;
+	frgb.open(m_strRGBDFolder + "/rgb.txt");
+	ofstream fgt;
+	fgt.open(m_strRGBDFolder + "/groundtruth.txt");
+
+
 	while (true)
 	{
 		m_colorStream.readFrame(&m_colorFrame);
@@ -183,6 +191,7 @@ void OpenNISensor::scan()
 				cv::flip(cImageBGR, cImageBGR, 1);
 			cv::imshow(strColorWindowName, cImageBGR);
 			cv::imwrite(m_strRGBDFolder + "/rgb/" + to_string(m_frameIdx) + ".png", cImageBGR);
+			frgb << to_string(m_frameIdx) << " rgb/" << to_string(m_frameIdx) << ".png\n"; 
 		}
 		else
 		{
@@ -200,6 +209,8 @@ void OpenNISensor::scan()
 				cv::flip(cScaledDepth, cScaledDepth, 1);
 			cv::imshow(strDepthWindowName, cScaledDepth);
 			cv::imwrite(m_strRGBDFolder + "/depth/" + to_string(m_frameIdx) + ".png", cScaledDepth);
+			fdepth << to_string(m_frameIdx) << " depth/" << to_string(m_frameIdx) << ".png\n"; 
+			fgt << to_string(m_frameIdx) << " 0 0 0 0 0 0 1 \n"; 
 		}
 		else
 		{
@@ -213,4 +224,9 @@ void OpenNISensor::scan()
 			break;
 		}
 	}
+
+	fdepth.close();
+	frgb.close();
+	fgt.close();
+
 }
